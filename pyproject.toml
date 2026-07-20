@@ -1,0 +1,19 @@
+[project]
+name = "oldify"
+version = "0.1.0"
+description = "Safely rotate folders into numbered .old backups"
+readme = "README.md"
+authors = [
+    { name = "David Mas Ponte", email = "david.mas@fht.org" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "typer>=0.27.0",
+]
+
+[project.scripts]
+oldify = "oldify:app"
+
+[build-system]
+requires = ["uv_build>=0.11.26,<0.12.0"]
+build-backend = "uv_build"
