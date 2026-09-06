@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 from typing import Annotated
 
+from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 import typer
 
 app = typer.Typer(
@@ -44,6 +45,18 @@ def _append_gitignore(gitignore: Path, entry: str) -> None:
         stream.write(f"{entry}\n")
 
 
+def _repo_root(cwd: Path) -> Path:
+    try:
+        repo = Repo(cwd, search_parent_directories=True)
+    except (InvalidGitRepositoryError, NoSuchPathError) as error:
+        raise OldifyError(f"Current directory is not a Git repository: {cwd}") from error
+
+    if repo.working_tree_dir is None:
+        raise OldifyError(f"Current directory is not a Git work tree: {cwd}")
+
+    return Path(repo.working_tree_dir).resolve()
+
+
 def oldify_folder(
     folder: Path,
     *,
@@ -64,11 +77,10 @@ def oldify_folder(
 
     gitignore: Path | None = None
     if not nogit:
-        if not (cwd / ".git").exists():
-            raise OldifyError(f"Current directory is not a Git repository: {cwd}")
+        _repo_root(cwd)
         gitignore = cwd / ".gitignore"
         if not gitignore.is_file():
-            raise OldifyError(f"Git repository has no .gitignore file: {cwd}")
+            raise OldifyError(f"Current directory has no .gitignore file: {cwd}")
 
     occupied = 0
     for number in range(1, 10):
@@ -98,7 +110,7 @@ def oldify_folder(
     folder.rename(destination)
 
     if gitignore is not None:
-        _append_gitignore(gitignore, _gitignore_entry(folder, cwd))
+        _append_gitignore(gitignore, _gitignore_entry(folder, gitignore.parent))
 
     return destination
 

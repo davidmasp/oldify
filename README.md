@@ -12,9 +12,9 @@ example.old  -> example.old2
 example.old2 -> example.old3
 ```
 
-The command is intentionally conservative: by default it only runs from a Git
-repository that already has a `.gitignore`, and it appends the new `.old` path to
-that file after a successful rename.
+The command is intentionally conservative: by default it only runs from a
+directory inside a Git repository that already has a local `.gitignore`, and it
+appends the new `.old` path to that file after a successful rename.
 
 ## Requirements
 
@@ -68,8 +68,8 @@ oldify --nogit --delete9 path/to/folder
 - The target path must exist and must be a directory.
 - Existing backup paths must also be directories. If a backup name exists as a
   file, the command fails instead of overwriting it.
-- Without `--nogit`, the current working directory must contain `.git` and a
-  `.gitignore` file.
+- Without `--nogit`, the current working directory must be inside a Git
+  repository and contain a local `.gitignore` file.
 - Without `--delete9`, a full backup chain through `.old9` fails without
   changing any folders.
 - With `--delete9`, the existing `.old9` directory is deleted before the rest of

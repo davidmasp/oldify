@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from git import Repo
+
 from oldify import OldifyError, oldify_folder
 
 
@@ -21,8 +23,11 @@ class OldifyTests(unittest.TestCase):
         (folder / "marker.txt").write_text(marker, encoding="utf-8")
         return folder
 
+    def make_git_repo(self) -> None:
+        Repo.init(self.root)
+
     def test_renames_folder_and_appends_gitignore_at_end(self) -> None:
-        (self.root / ".git").mkdir()
+        self.make_git_repo()
         (self.root / ".gitignore").write_text("*.pyc", encoding="utf-8")
         folder = self.make_folder("example")
 
@@ -32,6 +37,25 @@ class OldifyTests(unittest.TestCase):
         self.assertFalse(folder.exists())
         self.assertEqual((result / "marker.txt").read_text(), "original")
         self.assertEqual((self.root / ".gitignore").read_text(), "*.pyc\nexample.old\n")
+
+    def test_discovers_git_repo_from_subdirectory(self) -> None:
+        self.make_git_repo()
+        (self.root / ".gitignore").write_text("*.pyc\n", encoding="utf-8")
+        nested = self.root / "analysis" / "repeated_barcodes"
+        nested.mkdir(parents=True)
+        (nested / ".gitignore").write_text("*.tmp\n", encoding="utf-8")
+        folder = nested / "example"
+        folder.mkdir()
+        (folder / "marker.txt").write_text("original", encoding="utf-8")
+
+        result = oldify_folder(Path("example"), cwd=nested)
+
+        self.assertEqual(result, (nested / "example.old").resolve())
+        self.assertEqual((self.root / ".gitignore").read_text(), "*.pyc\n")
+        self.assertEqual(
+            (nested / ".gitignore").read_text(),
+            "*.tmp\nexample.old\n",
+        )
 
     def test_rotates_existing_backups(self) -> None:
         folder = self.make_folder("example", "new")
@@ -74,7 +98,7 @@ class OldifyTests(unittest.TestCase):
         with self.assertRaisesRegex(OldifyError, "not a Git repository"):
             oldify_folder(folder, cwd=self.root)
 
-        (self.root / ".git").mkdir()
+        self.make_git_repo()
         with self.assertRaisesRegex(OldifyError, "no .gitignore"):
             oldify_folder(folder, cwd=self.root)
 
