@@ -24,8 +24,8 @@ def _backup_path(folder: Path, number: int) -> Path:
     return folder.with_name(f"{folder.name}{suffix}")
 
 
-def _gitignore_entry(folder: Path, cwd: Path) -> str:
-    old_folder = _backup_path(folder, 1)
+def _gitignore_entry(folder: Path, cwd: Path, number: int = 1) -> str:
+    old_folder = _backup_path(folder, number)
     try:
         return old_folder.resolve().relative_to(cwd.resolve()).as_posix()
     except ValueError:
@@ -33,6 +33,14 @@ def _gitignore_entry(folder: Path, cwd: Path) -> str:
 
 
 def _append_gitignore(gitignore: Path, entry: str) -> None:
+    if gitignore.is_file():
+        try:
+            existing = gitignore.read_text(encoding="utf-8").splitlines()
+            if entry in existing:
+                return
+        except OSError:
+            pass
+
     needs_leading_newline = gitignore.stat().st_size > 0
     if needs_leading_newline:
         with gitignore.open("rb") as stream:
@@ -110,7 +118,9 @@ def oldify_folder(
     folder.rename(destination)
 
     if gitignore is not None:
-        _append_gitignore(gitignore, _gitignore_entry(folder, gitignore.parent))
+        for number in range(1, highest_to_move + 2):
+            entry = _gitignore_entry(folder, gitignore.parent, number)
+            _append_gitignore(gitignore, entry)
 
     return destination
 
