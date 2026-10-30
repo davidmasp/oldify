@@ -1,8 +1,8 @@
 # oldify
 
-`oldify` is a small Python CLI for moving a folder out of the way by renaming it
-to `<folder>.old`. If older backups already exist, it rotates them through
-numbered names up to `<folder>.old9`.
+`oldify` is a small Python CLI for moving a file or folder out of the way by
+renaming it to `<path>.old`. If older backups already exist, it rotates them
+through numbered names up to `<path>.old9`.
 
 For example, running `oldify example` renames:
 
@@ -37,11 +37,15 @@ oldify path/to/folder
 
 ## Usage
 
-Rename a folder and update `.gitignore`:
+Rename a file or folder and update `.gitignore`:
 
 ```console
 oldify path/to/folder
+oldify path/to/report.txt
 ```
+
+Files use the same naming scheme: `report.txt` becomes `report.txt.old`, and
+existing backups rotate to `report.txt.old2` through `report.txt.old9`.
 
 Skip the Git repository and `.gitignore` checks:
 
@@ -64,15 +68,15 @@ oldify --nogit --delete9 path/to/folder
 
 ## Behavior
 
-- Relative folder paths are resolved from the current working directory.
-- The target path must exist and must be a directory.
-- Existing backup paths must also be directories. If a backup name exists as a
-  file, the command fails instead of overwriting it.
+- Relative paths are resolved from the current working directory.
+- The target path must exist and must be a regular file or directory.
+- Existing backup paths must match the target type: files for a file, directories
+  for a directory. A conflicting type causes an error before any paths change.
 - Without `--nogit`, the current working directory must be inside a Git
   repository and contain a local `.gitignore` file.
 - Without `--delete9`, a full backup chain through `.old9` fails without
-  changing any folders.
-- With `--delete9`, the existing `.old9` directory is deleted before the rest of
+  changing any files or folders.
+- With `--delete9`, the existing `.old9` file or folder is deleted before the rest of
   the backups rotate.
 
 ## Development
@@ -85,3 +89,7 @@ uv run python -m unittest discover -s tests
 
 The package exposes a `typer` application at `oldify:app` and installs the
 `oldify` console script declared in `pyproject.toml`.
+
+For Python callers, `oldify_path()` accepts either a file or folder. The existing
+`oldify_folder()` function remains available with the same arguments and also
+supports both types.

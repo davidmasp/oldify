@@ -1,7 +1,7 @@
 [project]
 name = "oldify"
 version = "0.1.1"
-description = "Safely rotate folders into numbered .old backups"
+description = "Safely rotate files and folders into numbered .old backups"
 readme = "README.md"
 authors = [
     { name = "David Mas Ponte", email = "david.mas@fht.org" }
