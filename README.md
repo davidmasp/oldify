@@ -37,6 +37,12 @@ oldify path/to/folder
 
 ## Usage
 
+Show the installed version:
+
+```console
+oldify --version
+```
+
 Rename a file or folder and update `.gitignore`:
 
 ```console
