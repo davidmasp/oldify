@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from git import InvalidGitRepositoryError, NoSuchPathError, Repo
-
 from .errors import OldifyError
 
 
@@ -38,6 +36,8 @@ def _append_gitignore(gitignore: Path, entry: str) -> None:
 
 
 def _repo_root(cwd: Path) -> Path:
+    from git import InvalidGitRepositoryError, NoSuchPathError, Repo
+
     try:
         repo = Repo(cwd, search_parent_directories=True)
     except (InvalidGitRepositoryError, NoSuchPathError) as error:

@@ -1,6 +1,6 @@
 [project]
 name = "oldify"
-version = "0.1.3"
+version = "0.1.4"
 description = "Safely rotate files and folders into numbered .old backups"
 readme = "README.md"
 authors = [
