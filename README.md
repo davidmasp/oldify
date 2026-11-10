@@ -23,7 +23,21 @@ appends the new `.old` path to that file after a successful rename.
 
 ## Installation
 
-Install directly from this project:
+Install directly from GitHub:
+
+```console
+uv tool install git+https://github.com/davidmasp/oldify.git
+```
+
+Or install a specific release:
+
+```console
+uv tool install git+https://github.com/davidmasp/oldify.git@v0.1.5
+```
+
+Add `--force` to either command to replace an existing installation.
+
+To install from a local checkout, run this from the project directory:
 
 ```console
 uv tool install .
