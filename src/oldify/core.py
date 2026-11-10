@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+from datetime import date as local_date
 from pathlib import Path
 
 from .errors import OldifyError
@@ -20,8 +21,9 @@ def oldify_path(
     delete9: bool = False,
     nogit: bool = False,
     cwd: Path | None = None,
+    date: bool = False,
 ) -> Path:
-    """Rotate a file or folder and return its new ``.old`` path."""
+    """Rotate a file or folder, optionally using today's date in its backup stem."""
     cwd = (cwd or Path.cwd()).resolve()
     path = path.expanduser()
     if not path.is_absolute():
@@ -40,9 +42,11 @@ def oldify_path(
         if not gitignore.is_file():
             raise OldifyError(f"Current directory has no .gitignore file: {cwd}")
 
+    stem = path.with_name(f"{path.name}.{local_date.today():%Y%m%d}") if date else path
+
     occupied = 0
     for number in range(1, 10):
-        backup = _backup_path(path, number)
+        backup = _backup_path(stem, number)
         if not backup.exists() and not backup.is_symlink():
             break
         if not (backup.is_dir() if is_folder else backup.is_file()):
@@ -53,11 +57,11 @@ def oldify_path(
     if occupied == 9 and not delete9:
         raise OldifyError(
             f"Cannot oldify {path}: backups already exist through "
-            f"{_backup_path(path, 9).name}. Use --delete9 to replace the oldest backup."
+            f"{_backup_path(stem, 9).name}. Use --delete9 to replace the oldest backup."
         )
 
     if occupied == 9:
-        oldest = _backup_path(path, 9)
+        oldest = _backup_path(stem, 9)
         if oldest.is_dir() and not oldest.is_symlink():
             shutil.rmtree(oldest)
         else:
@@ -67,14 +71,14 @@ def oldify_path(
         highest_to_move = occupied
 
     for number in range(highest_to_move, 0, -1):
-        _backup_path(path, number).rename(_backup_path(path, number + 1))
+        _backup_path(stem, number).rename(_backup_path(stem, number + 1))
 
-    destination = _backup_path(path, 1)
+    destination = _backup_path(stem, 1)
     path.rename(destination)
 
     if gitignore is not None:
         for number in range(1, highest_to_move + 2):
-            entry = _gitignore_entry(_backup_path(path, number), gitignore.parent)
+            entry = _gitignore_entry(_backup_path(stem, number), gitignore.parent)
             _append_gitignore(gitignore, entry)
 
     return destination
@@ -86,6 +90,7 @@ def oldify_folder(
     delete9: bool = False,
     nogit: bool = False,
     cwd: Path | None = None,
+    date: bool = False,
 ) -> Path:
     """Backward-compatible entry point for :func:`oldify_path`."""
-    return oldify_path(folder, delete9=delete9, nogit=nogit, cwd=cwd)
+    return oldify_path(folder, delete9=delete9, nogit=nogit, cwd=cwd, date=date)

@@ -53,6 +53,19 @@ oldify path/to/report.txt
 Files use the same naming scheme: `report.txt` becomes `report.txt.old`, and
 existing backups rotate to `report.txt.old2` through `report.txt.old9`.
 
+Include the current local calendar date in backup names:
+
+```console
+oldify --date path/to/folder
+oldify --date path/to/report.txt
+```
+
+On November 10, 2026, these create `folder.20261110.old` and
+`report.txt.20261110.old`. Repeated runs on the same day rotate that day's
+backups through `.old2` to `.old9`. Other dates and undated backups have
+separate chains. `--delete9` applies to the selected chain, and `.gitignore`
+entries use the resulting dated names.
+
 Skip the Git repository and `.gitignore` checks:
 
 ```console
@@ -99,3 +112,4 @@ The package exposes a `typer` application at `oldify:app` and installs the
 For Python callers, `oldify_path()` accepts either a file or folder. The existing
 `oldify_folder()` function remains available with the same arguments and also
 supports both types.
+Both functions accept `date=True` to use the same dated naming as `--date`.

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
+from unittest.mock import patch
 
 from git import Repo
 from typer.testing import CliRunner
@@ -228,6 +230,56 @@ class OldifyTests(unittest.TestCase):
             "# example.old\nexample.old.extra\nexample.old\n",
         )
 
+    @patch("oldify.core.local_date")
+    def test_dated_rotation_is_scoped_and_updates_gitignore(self, clock) -> None:
+        clock.today.return_value = date(2026, 11, 10)
+        self.make_git_repo()
+        gitignore = self.root / ".gitignore"
+        gitignore.write_text("")
+        self.make_path("example", "new")
+        self.make_path("example.20261110.old", "today")
+        self.make_path("example.20261109.old", "yesterday")
+        self.make_path("example.old", "undated")
+
+        result = oldify_folder(Path("example"), date=True, cwd=self.root)
+
+        self.assertEqual(result, self.root.resolve() / "example.20261110.old")
+        self.assertEqual(self.read_marker(result), "new")
+        self.assertEqual(self.read_marker(self.root / "example.20261110.old2"), "today")
+        self.assertEqual(self.read_marker(self.root / "example.20261109.old"), "yesterday")
+        self.assertEqual(self.read_marker(self.root / "example.old"), "undated")
+        self.assertEqual(gitignore.read_text(), "example.20261110.old\nexample.20261110.old2\n")
+
+    @patch("oldify.core.local_date")
+    def test_dated_full_chain_and_delete9(self, clock) -> None:
+        clock.today.return_value = date(2026, 11, 10)
+        path = self.make_path("example", "new")
+        for number in range(1, 10):
+            suffix = ".old" if number == 1 else f".old{number}"
+            self.make_path(f"example.20261110{suffix}", str(number))
+        self.make_path("example.old9", "undated")
+
+        with self.assertRaisesRegex(OldifyError, r"example\.20261110\.old9.*--delete9"):
+            oldify_path(path, date=True, nogit=True, cwd=self.root)
+        self.assertEqual(self.read_marker(path), "new")
+        self.assertEqual(self.read_marker(self.root / "example.20261110.old9"), "9")
+
+        oldify_path(path, date=True, delete9=True, nogit=True, cwd=self.root)
+        self.assertEqual(self.read_marker(self.root / "example.20261110.old"), "new")
+        self.assertEqual(self.read_marker(self.root / "example.20261110.old9"), "8")
+        self.assertEqual(self.read_marker(self.root / "example.old9"), "undated")
+
+    @patch("oldify.core.local_date")
+    def test_cli_date(self, clock) -> None:
+        clock.today.return_value = date(2026, 11, 10)
+        path = self.make_path("example")
+
+        result = CliRunner().invoke(app, ["--nogit", "--date", str(path)])
+
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertIn("example.20261110.old", result.output)
+        self.assertEqual(self.read_marker(self.root / "example.20261110.old"), "original")
+
 
 class FileOldifyTests(OldifyTests):
     """Run the same rotation and Git behavior checks against regular files."""
@@ -249,6 +301,16 @@ class FileOldifyTests(OldifyTests):
         self.assertEqual(result, self.root.resolve() / "report.txt.old")
         self.assertEqual(result.read_text(), "new")
         self.assertEqual((self.root / "report.txt.old2").read_text(), "previous")
+
+    @patch("oldify.core.local_date")
+    def test_date_follows_full_filename(self, clock) -> None:
+        clock.today.return_value = date(2026, 11, 10)
+        self.make_path("report.txt")
+
+        result = oldify_path(Path("report.txt"), date=True, nogit=True, cwd=self.root)
+
+        self.assertEqual(result, self.root.resolve() / "report.txt.20261110.old")
+        self.assertEqual(result.read_text(), "original")
 
 
 if __name__ == "__main__":

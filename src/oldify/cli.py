@@ -56,10 +56,14 @@ def main(
             help="Skip the Git repository/.gitignore requirement and do not update .gitignore.",
         ),
     ] = False,
+    date: Annotated[
+        bool,
+        typer.Option("--date", help="Include today's local date in backup names (YYYYMMDD)."),
+    ] = False,
 ) -> None:
     """Rename PATH to PATH.old and rotate prior backups up to PATH.old9."""
     try:
-        destination = oldify_path(path, delete9=delete9, nogit=nogit)
+        destination = oldify_path(path, delete9=delete9, nogit=nogit, date=date)
     except (OldifyError, OSError) as error:
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(code=1) from error
