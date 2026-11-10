@@ -21,7 +21,7 @@ def _show_version(value: bool) -> bool:
 
 app = typer.Typer(
     add_completion=False,
-    help="Rename a file or folder to .old, rotating existing backups through .old9.",
+    help="Back up a file or folder to .old, optionally as .tar.gz, rotating through .old9.",
 )
 
 
@@ -30,7 +30,7 @@ def main(
     path: Annotated[
         Path,
         typer.Argument(
-            help="File or folder to rename. Relative paths are resolved from the current directory.",
+            help="File or folder to back up. Relative paths are resolved from the current directory.",
         ),
     ],
     version: Annotated[
@@ -46,7 +46,7 @@ def main(
         bool,
         typer.Option(
             "--delete9",
-            help="Delete .old9 when all nine backup slots are occupied.",
+            help="Delete the oldest backup when all nine slots in the selected chain are occupied.",
         ),
     ] = False,
     nogit: Annotated[
@@ -60,10 +60,24 @@ def main(
         bool,
         typer.Option("--date", help="Include today's local date in backup names (YYYYMMDD)."),
     ] = False,
+    targz: Annotated[
+        bool,
+        typer.Option("--targz", help="Store the backup as a gzip-compressed tar archive (.tar.gz)."),
+    ] = False,
+    compression_level: Annotated[
+        int | None,
+        typer.Option(
+            "--compression-level",
+            help="Gzip compression level, 0 through 9 (default: 9). Requires --targz.",
+        ),
+    ] = None,
 ) -> None:
-    """Rename PATH to PATH.old and rotate prior backups up to PATH.old9."""
+    """Back up PATH and rotate prior backups up to the ninth slot."""
     try:
-        destination = oldify_path(path, delete9=delete9, nogit=nogit, date=date)
+        destination = oldify_path(
+            path, delete9=delete9, nogit=nogit, date=date,
+            targz=targz, compression_level=compression_level,
+        )
     except (OldifyError, OSError) as error:
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(code=1) from error
