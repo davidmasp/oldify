@@ -194,6 +194,40 @@ class OldifyTests(unittest.TestCase):
             gitignore.read_text(), "example.old\nexample.old2\nexample.old3\n"
         )
 
+    def test_repeated_rotations_preserve_existing_entries(self) -> None:
+        self.make_git_repo()
+        gitignore = self.root / ".gitignore"
+        initial = "# backups\nexample.old.extra\nexample.old2\nexample.old"
+        gitignore.write_text(initial, encoding="utf-8")
+
+        self.make_path("example", "first")
+        oldify_path(Path("example"), cwd=self.root)
+        self.assertEqual(gitignore.read_text(), initial)
+
+        self.make_path("example", "second")
+        oldify_path(Path("example"), cwd=self.root)
+        self.assertEqual(gitignore.read_text(), initial)
+
+        self.make_path("example", "third")
+        oldify_path(Path("example"), cwd=self.root)
+        self.assertEqual(gitignore.read_text(), initial + "\nexample.old3\n")
+        self.assertEqual(self.read_marker(self.root / "example.old"), "third")
+        self.assertEqual(self.read_marker(self.root / "example.old2"), "second")
+        self.assertEqual(self.read_marker(self.root / "example.old3"), "first")
+
+    def test_similar_lines_do_not_replace_an_exact_entry(self) -> None:
+        self.make_git_repo()
+        gitignore = self.root / ".gitignore"
+        gitignore.write_text("# example.old\nexample.old.extra", encoding="utf-8")
+        self.make_path("example")
+
+        oldify_path(Path("example"), cwd=self.root)
+
+        self.assertEqual(
+            gitignore.read_text(),
+            "# example.old\nexample.old.extra\nexample.old\n",
+        )
+
 
 class FileOldifyTests(OldifyTests):
     """Run the same rotation and Git behavior checks against regular files."""
